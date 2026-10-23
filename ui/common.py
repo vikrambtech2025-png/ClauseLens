@@ -1,0 +1,385 @@
+"""Shared Streamlit helpers and presentation primitives."""
+
+from __future__ import annotations
+
+import html
+import os
+from pathlib import Path
+from typing import Any, Iterable
+
+import streamlit as st
+
+from core.analysis import AnalysisPipeline
+from models.schemas import (
+    AnalysisResult,
+    ClauseCategory,
+    Finding,
+    FindingStatus,
+    PolicyConfig,
+    ReviewDecision,
+    VerificationStatus,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+SAMPLES = ROOT / "samples"
+
+STATUS_COLORS = {
+    "HIGH": "#b42318",
+    "MEDIUM": "#b54708",
+    "LOW": "#475467",
+    "REVIEW_REQUIRED": "#6941c6",
+    "NO_CONFLICT_FOUND": "#067647",
+    "NOT_FOUND": "#475467",
+    "NOT_VERIFIED": "#b42318",
+}
+
+STATUS_LABELS = {
+    "HIGH": "High",
+    "MEDIUM": "Medium",
+    "LOW": "Low",
+    "REVIEW_REQUIRED": "Review required",
+    "NO_CONFLICT_FOUND": "No conflict found",
+    "NOT_FOUND": "Not found",
+    "NOT_VERIFIED": "Not verified",
+}
+
+VERIFICATION_LABELS = {
+    "VERIFIED": "Evidence verified",
+    "FAILED_QUOTE_MATCH": "Quote failed verification",
+    "FAILED_LOCATION": "Location failed verification",
+    "FAILED_POLICY_SUPPORT": "Policy support failed",
+    "INSUFFICIENT_EVIDENCE": "Insufficient evidence",
+    "AMBIGUOUS": "Ambiguous evidence",
+}
+
+CATEGORY_ICONS = {
+    ClauseCategory.PAYMENT: "◷",
+    ClauseCategory.RENEWAL_TERMINATION: "↻",
+    ClauseCategory.LIABILITY_INDEMNITY: "⚖",
+    ClauseCategory.JURISDICTION_DISPUTE: "⌖",
+}
+
+UPLOAD_TYPES = ["pdf", "docx"]
+UPLOAD_LIMIT_MB = 10
+
+
+def inject_css() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --cl-ink: #0f172a;
+            --cl-muted: #475467;
+            --cl-line: #e4e7ec;
+            --cl-teal: #0f766e;
+            --cl-soft: #f8fafc;
+        }
+        .block-container {padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1240px;}
+        h1, h2, h3 {color: var(--cl-ink); letter-spacing: -0.02em;}
+        .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em; color: var(--cl-ink);}
+        .cl-brand span {color: var(--cl-teal);}
+        .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--cl-muted); font-weight: 700;}
+        .cl-sub {color: var(--cl-muted); font-size: .95rem; line-height: 1.45;}
+        .cl-card {border: 1px solid var(--cl-line); border-radius: 14px; padding: 16px 18px; background: #fff; color: var(--cl-ink); height: 100%;}
+        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; color: var(--cl-muted); font-weight: 600; letter-spacing: .02em;}
+        .cl-big {font-size: 1.85rem; font-weight: 750; color: var(--cl-ink); line-height: 1.1;}
+        .cl-mini {font-size: .78rem; color: var(--cl-muted);}
+        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap;}
+        .cl-flag {border-left: 4px solid var(--cl-line); padding: 10px 14px; margin: 8px 0; background: var(--cl-soft); color: var(--cl-ink); border-radius: 0 10px 10px 0;}
+        .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #f8fafc; color: var(--cl-ink); border: 1px solid var(--cl-line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
+        .cl-quote mark {background: #fef0c7; color: #7a2e0e; padding: 1px 2px;}
+        .cl-source {font-size: .8rem; color: var(--cl-muted);}
+        .cl-divider {height: 1px; background: var(--cl-line); margin: 14px 0;}
+        .cl-note {background: #f0f9ff; border: 1px solid #b9e6fe; border-radius: 10px; padding: 12px 14px; color: #0b4a6f; font-size: .88rem;}
+        .cl-warn {background: #fffaeb; border: 1px solid #fedf89; border-radius: 10px; padding: 12px 14px; color: #7a2e0e; font-size: .88rem;}
+        .cl-error {background: #fef3f2; border: 1px solid #fecdca; border-radius: 10px; padding: 12px 14px; color: #912018; font-size: .88rem;}
+        .cl-success {background: #ecfdf3; border: 1px solid #abefc6; border-radius: 10px; padding: 12px 14px; color: #05603a; font-size: .88rem;}
+        div[data-testid="stMetricValue"] {font-size: 1.55rem;}
+        div[data-testid="stSidebar"] {border-right: 1px solid var(--cl-line);}
+        .stButton > button, .stDownloadButton > button {border-radius: 9px; font-weight: 600;}
+        .stButton > button:disabled, .stDownloadButton > button:disabled,
+        .stButton > button:disabled p, .stDownloadButton > button:disabled p {
+            color: #475467 !important;
+            -webkit-text-fill-color: #475467 !important;
+            opacity: 1 !important;
+        }
+        .stButton > button:disabled, .stDownloadButton > button:disabled {border-color: #cbd5e1 !important;}
+        .stTextArea textarea, .stTextInput input {border-radius: 8px;}
+        [data-testid="stFileUploaderDropzone"] {border-radius: 12px; border: 1.5px dashed #b6c2d1; background: #fbfdff;}
+        /* Streamlit's default syntax colors are tuned for a dark palette. Recolor
+           every JSON/code token for a light background so no value is washed out. */
+        .token.punctuation {color: #475467 !important;}
+        .token.property {color: #0b4a6f !important;}
+        .token.operator {color: #7a2e0e !important;}
+        .token.string {color: #05603a !important;}
+        .token.number {color: #6941c6 !important;}
+        .token.boolean {color: #912018 !important;}
+        .token.null, .token.keyword {color: #1d4ed8 !important;}
+        code {color: #0b4a6f !important;}
+        .pretty-json-container, .pretty-json-container div, .pretty-json-container span {
+            color: var(--cl-ink) !important;
+        }
+        .pretty-json-container .object-key, .pretty-json-container .object-key span {
+            color: #0b4a6f !important;
+            opacity: 1 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def init_state() -> None:
+    st.session_state.setdefault("policy", PolicyConfig())
+    st.session_state.setdefault("result", None)
+    st.session_state.setdefault("source_path", None)
+    st.session_state.setdefault("source_name", None)
+    st.session_state.setdefault("analysis_error", None)
+    st.session_state.setdefault("review_store", {})
+    st.session_state.setdefault("analysis_count", 0)
+    st.session_state.setdefault("analysis_policy_fingerprint", None)
+    st.session_state.setdefault("last_use_llm", False)
+    # Incremented when a widget must be recreated from a clean slate. This is
+    # the supported Streamlit pattern for clearing a file uploader or stale
+    # review fields without mutating their widget keys after instantiation.
+    st.session_state.setdefault("uploader_nonce", 0)
+    st.session_state.setdefault("review_widget_nonce", 0)
+
+
+def get_result() -> AnalysisResult | None:
+    result = st.session_state.get("result")
+    return result if isinstance(result, AnalysisResult) else None
+
+
+def request_navigation(page: str) -> None:
+    """Navigate without writing to the sidebar widget key after instantiation."""
+    st.session_state["_requested_page"] = page
+    st.rerun()
+
+
+def clear_analysis() -> None:
+    st.session_state["result"] = None
+    st.session_state["analysis_error"] = None
+    st.session_state["review_store"] = {}
+    st.session_state["source_path"] = None
+    st.session_state["source_name"] = None
+    st.session_state["analysis_policy_fingerprint"] = None
+
+
+def set_analysis(result: AnalysisResult, source_path: str, source_name: str) -> None:
+    st.session_state["result"] = result
+    st.session_state["analysis_error"] = None
+    st.session_state["review_store"] = {}
+    st.session_state["source_path"] = source_path
+    st.session_state["source_name"] = source_name
+    st.session_state["analysis_policy_fingerprint"] = policy_fingerprint(result.policy)
+    st.session_state["analysis_count"] = int(st.session_state.get("analysis_count", 0)) + 1
+
+
+def run_analysis(file_path: str, source_name: str, use_llm: bool) -> AnalysisResult:
+    policy: PolicyConfig = st.session_state["policy"]
+    pipeline = AnalysisPipeline()
+    result = pipeline.analyze_file(file_path, source_name, policy, use_llm=use_llm)
+    st.session_state["last_use_llm"] = use_llm
+    set_analysis(result, file_path, source_name)
+    return result
+
+
+def rerun_current(use_llm: bool | None = None) -> AnalysisResult | None:
+    path = st.session_state.get("source_path")
+    name = st.session_state.get("source_name")
+    if not path or not name or not Path(path).exists():
+        return None
+    if use_llm is None:
+        use_llm = bool(st.session_state.get("last_use_llm", False))
+    return run_analysis(str(path), str(name), use_llm)
+
+
+def sample_options() -> dict[str, Path]:
+    return {
+        "Risky demo contract (DOCX)": SAMPLES / "demo_contract.docx",
+        "Risky demo contract (PDF)": SAMPLES / "demo_contract.pdf",
+        "Missing jurisdiction example": SAMPLES / "demo_missing_category.docx",
+        "Compliant example": SAMPLES / "compliant_contract.docx",
+        "Prompt-injection example": SAMPLES / "prompt_injection_contract.docx",
+        "Scanned / no text example": SAMPLES / "scanned_no_text.pdf",
+    }
+
+
+def esc(value: Any) -> str:
+    return html.escape(str(value if value is not None else ""))
+
+
+def badge(status: str, label: str | None = None) -> str:
+    color = STATUS_COLORS.get(status, "#475467")
+    background = _tint(color)
+    text = label or STATUS_LABELS.get(status, status.replace("_", " ").title())
+    return (
+        f'<span class="cl-badge" style="color:{color};background:{background};'
+        f'border:1px solid {color}33">{esc(text)}</span>'
+    )
+
+
+def verification_badge(status: VerificationStatus | str) -> str:
+    value = status.value if isinstance(status, VerificationStatus) else str(status)
+    good = value == "VERIFIED"
+    color = "#067647" if good else "#b42318" if value.startswith("FAILED") else "#b54708"
+    label = VERIFICATION_LABELS.get(value, value.replace("_", " ").title())
+    return (
+        f'<span class="cl-badge" style="color:{color};background:{_tint(color)};'
+        f'border:1px solid {color}33">{esc(label)}</span>'
+    )
+
+
+def _tint(color: str) -> str:
+    # Soft, accessible backgrounds for badge chips.
+    return {
+        "#b42318": "#fef3f2",
+        "#b54708": "#fffaeb",
+        "#475467": "#f2f4f7",
+        "#6941c6": "#f4f3ff",
+        "#067647": "#ecfdf3",
+    }.get(color, "#f2f4f7")
+
+
+def category_label(category: ClauseCategory | str) -> str:
+    if isinstance(category, ClauseCategory):
+        return category.label
+    try:
+        return ClauseCategory(category).label
+    except ValueError:
+        return str(category)
+
+
+def category_icon(category: ClauseCategory | str) -> str:
+    try:
+        value = category if isinstance(category, ClauseCategory) else ClauseCategory(category)
+    except ValueError:
+        return "•"
+    return CATEGORY_ICONS[value]
+
+
+def location_text(finding: Finding) -> str:
+    parts: list[str] = []
+    if finding.page_number is not None:
+        parts.append(f"Page {finding.page_number}")
+    if finding.paragraph_index is not None:
+        parts.append(f"Paragraph {finding.paragraph_index}")
+    if not parts and finding.source_id:
+        parts.append(finding.source_id)
+    if finding.span_start is not None and finding.span_end is not None:
+        parts.append(f"chars {finding.span_start}–{finding.span_end}")
+    return " · ".join(parts) if parts else "Location unavailable"
+
+
+def finding_label(finding: Finding) -> str:
+    quote = " ".join(finding.exact_quote.split())
+    quote = quote[:88] + ("…" if len(quote) > 88 else "")
+    if not quote:
+        quote = finding.explanation[:88] + "…"
+    return f"{finding.finding_id} · {finding.clause_category.label} · {finding.status.value} · {quote}"
+
+
+def status_order(status: FindingStatus) -> int:
+    return {
+        FindingStatus.HIGH: 0,
+        FindingStatus.MEDIUM: 1,
+        FindingStatus.LOW: 2,
+        FindingStatus.REVIEW_REQUIRED: 3,
+        FindingStatus.NO_CONFLICT_FOUND: 4,
+        FindingStatus.NOT_FOUND: 5,
+        FindingStatus.NOT_VERIFIED: 6,
+    }.get(status, 9)
+
+
+def unresolved_findings(result: AnalysisResult) -> list[Finding]:
+    return [
+        finding
+        for finding in result.findings
+        if finding.status
+        in {
+            FindingStatus.REVIEW_REQUIRED,
+            FindingStatus.NOT_FOUND,
+            FindingStatus.NOT_VERIFIED,
+        }
+    ]
+
+
+def apply_reviews(result: AnalysisResult, store: dict[str, dict[str, Any]]) -> AnalysisResult:
+    """Return a copy with user decisions applied, never mutating AI findings."""
+    reviewed = result.model_copy(deep=True)
+    for finding in reviewed.findings:
+        entry = store.get(finding.finding_id)
+        if not entry:
+            continue
+        decision = entry.get("decision")
+        if decision:
+            try:
+                finding.review_decision = ReviewDecision(decision)
+            except ValueError:
+                finding.review_decision = None
+        finding.review_notes = str(entry.get("notes", ""))
+        finding.reviewer = str(entry.get("reviewer", ""))
+        finding.reviewed_at = entry.get("reviewed_at")
+    return reviewed
+
+
+def review_counts(store: dict[str, dict[str, Any]]) -> dict[str, int]:
+    counts = {decision.value: 0 for decision in ReviewDecision}
+    for entry in store.values():
+        decision = entry.get("decision")
+        if decision in counts:
+            counts[decision] += 1
+    counts["unreviewed"] = max(0, len(store) - sum(counts.values()))
+    return counts
+
+
+def policy_summary_rows(policy: PolicyConfig) -> list[tuple[str, str]]:
+    return [
+        ("Maximum payment period", f"{policy.max_payment_days} {policy.payment_basis.value} days"),
+        ("Automatic renewal", "Allowed" if policy.allow_auto_renewal else "Not allowed"),
+        ("Minimum renewal notice", f"{policy.min_renewal_notice_days} days"),
+        ("Liability cap", "Required" if policy.liability_must_be_capped else "Not required"),
+        ("Exclusive jurisdiction", "Allowed" if policy.allow_exclusive_jurisdiction else "Not allowed"),
+        ("Approved jurisdictions", ", ".join(policy.approved_jurisdictions)),
+    ]
+
+
+def policy_fingerprint(policy: PolicyConfig) -> str:
+    return "|".join(
+        [
+            str(policy.max_payment_days),
+            policy.payment_basis.value,
+            str(policy.allow_auto_renewal),
+            str(policy.min_renewal_notice_days),
+            str(policy.liability_must_be_capped),
+            str(policy.allow_exclusive_jurisdiction),
+            ",".join(policy.approved_jurisdictions),
+            str(policy.preferences.model_dump()),
+        ]
+    )
+
+
+def write_error(message: str) -> None:
+    st.markdown(f'<div class="cl-error">{esc(message)}</div>', unsafe_allow_html=True)
+
+
+def write_warning(message: str) -> None:
+    st.markdown(f'<div class="cl-warn">{esc(message)}</div>', unsafe_allow_html=True)
+
+
+def write_note(message: str) -> None:
+    st.markdown(f'<div class="cl-note">{esc(message)}</div>', unsafe_allow_html=True)
+
+
+def write_success(message: str) -> None:
+    st.markdown(f'<div class="cl-success">{esc(message)}</div>', unsafe_allow_html=True)
+
+
+def report_timestamp(result: AnalysisResult) -> str:
+    return result.generated_at.replace("T", " ").replace("+00:00", " UTC")
+
+
+def safe_upload_name(filename: str) -> str:
+    name = os.path.basename(filename.replace("\\", "/"))
+    return name or "contract"
