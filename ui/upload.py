@@ -23,15 +23,61 @@ def _save_upload(filename: str, data: bytes) -> Path:
     return path
 
 
-def _execute(path: Path, name: str, use_llm: bool) -> None:
+def _execute(path: Path, name: str, use_llm: bool, is_demo: bool = False) -> None:
     try:
         with st.status("Analyzing…", expanded=True) as status:
+            status.write(f"📄 Loading file: {name}")
+            status.write(f"📄 File path: {path}")
+            status.write("📄 Extracting text from document…")
             result = common.run_analysis(str(path), name, use_llm)
+            status.write("✓ Text extracted")
+            status.write(f"📄 Document: {result.document.filename}")
+            status.write(f"📄 Characters extracted: {result.document.stats.num_chars}")
+            status.write("🔍 Segmenting clauses…")
+            status.write("✓ Clauses segmented")
+            status.write("🛡️ Checking for prompt injection…")
+            status.write("✓ Security check complete")
+            status.write("📚 Retrieving relevant passages…")
+            status.write("✓ Passages retrieved")
+            status.write("⚖️ Applying policy rules…")
+            status.write("✓ Policy evaluation complete")
+            status.write("🔎 Verifying evidence…")
+            status.write("✓ Evidence verified")
+            status.write("📊 Classifying risks…")
+            status.write("✓ Risk classification complete")
+
+            # Create a short, understandable summary
+            summary = result.summary
+            risk_summary = []
+            if summary.confirmed_conflicts > 0:
+                risk_summary.append(f"{summary.confirmed_conflicts} HIGH/MEDIUM risks")
+            if summary.review_required > 0:
+                risk_summary.append(f"{summary.review_required} need review")
+            if summary.not_verified > 0:
+                risk_summary.append(f"{summary.not_verified} unverified")
+            if summary.no_conflict_found > 0:
+                risk_summary.append(f"{summary.no_conflict_found} compliant")
+
+            summary_text = ", ".join(risk_summary) if risk_summary else "No issues found"
             status.update(
-                label=f"Done · {len(result.findings)} findings",
+                label=f"Done · {summary_text}",
                 state="complete",
                 expanded=False,
             )
+        # Check for prompt injection warnings
+        if any("prompt-injection" in warning.lower() or "injection" in warning.lower() for warning in result.warnings):
+            st.session_state["analysis_security_alert"] = "SECURITY ALERT: This document contains passages that appear to be prompt-injection attempts. These passages have been quarantined from analysis, but the rest of the document was analyzed normally. Review the warnings on the Risk dashboard for details."
+
+        # Store file hash for verification
+        st.session_state["document_sha256"] = result.document.sha256
+
+        # Different success message for demo vs uploaded contract
+        if is_demo:
+            st.session_state["analysis_success"] = f"Analysis complete: {summary_text}"
+        else:
+            st.session_state["analysis_success"] = "The uploaded contract has been done !!!"
+            st.session_state["analysis_summary"] = summary_text
+
         st.rerun()
     except DocumentError as exc:
         st.session_state["analysis_error"] = str(exc)
@@ -50,15 +96,36 @@ def render() -> None:
     if error:
         common.write_error(error)
 
+    security_alert = st.session_state.get("analysis_security_alert")
+    if security_alert:
+        common.write_error(security_alert)
+
+    success = st.session_state.get("analysis_success")
+    if success:
+        common.write_success(success)
+        # Clear success message after showing it once (only for upload page)
+        if success == "The uploaded contract has been done !!!":
+            st.session_state["analysis_success"] = None
+
+    # Add clear notifications button if any notifications exist
+    if error or security_alert or success:
+        if st.button("Clear notifications", use_container_width=False):
+            st.session_state["analysis_error"] = None
+            st.session_state["analysis_security_alert"] = None
+            st.session_state["analysis_success"] = None
+
     with st.container():
         st.markdown("### Upload")
+        # Use a unique key that includes the analysis count to force widget recreation
+        uploader_key = f"contract_uploader_{int(st.session_state.get('uploader_nonce', 0))}_{int(st.session_state.get('analysis_count', 0))}"
         uploaded = st.file_uploader(
             "Contract file",
             type=common.UPLOAD_TYPES,
             accept_multiple_files=False,
             help=f"PDF or DOCX, up to {settings.max_upload_mb} MB",
-            key=f"contract_uploader_{int(st.session_state.get('uploader_nonce', 0))}",
+            key=uploader_key,
         )
+
         use_llm = st.checkbox(
             "Use AI interpretation",
             value=False,
@@ -93,8 +160,14 @@ def render() -> None:
                 )
                 st.rerun()
             else:
+                # Clear previous analysis before running new one
+                common.clear_analysis()
                 path = _save_upload(uploaded.name, data)
-                _execute(path, uploaded.name, use_llm)
+                # Store the actual file size for verification
+                st.session_state["uploaded_file_size"] = len(data)
+                _execute(path, uploaded.name, use_llm, is_demo=False)
+
+        st.caption("What this does: Extracts text → Checks security → Evaluates clauses → Verifies evidence → Classifies risks")
 
         st.markdown('<div class="cl-divider"></div>', unsafe_allow_html=True)
         st.markdown("### Demo")
@@ -117,4 +190,52 @@ def render() -> None:
                 st.session_state["analysis_error"] = "Demo sample missing"
                 st.rerun()
             else:
-                _execute(path, path.name, demo_use_llm)
+                # Clear previous analysis before running new one
+                common.clear_analysis()
+                _execute(path, path.name, demo_use_llm, is_demo=True)
+
+        st.caption("What this does: Extracts text → Checks security → Evaluates clauses → Verifies evidence → Classifies risks")
+
+        # Display analysis stats for both demo and uploaded files
+        result = common.get_result()
+        if result:
+            st.markdown('<div class="cl-divider"></div>', unsafe_allow_html=True)
+            st.markdown("### Analysis Results")
+
+            # Debug: show current source and document hash
+            source_name = st.session_state.get("source_name", "Unknown")
+            source_path = st.session_state.get("source_path", "Unknown")
+            doc_hash = st.session_state.get("document_sha256", "Unknown")
+            st.caption(f"File: {source_name}")
+            st.caption(f"Path: {source_path}")
+            st.caption(f"Hash: {doc_hash[:16]}..." if doc_hash != "Unknown" else f"Hash: {doc_hash}")
+            st.caption(f"Document chars: {result.document.stats.num_chars}")
+            st.caption(f"Document words: {result.document.stats.num_words}")
+
+            summary = result.summary
+            
+            # Create stats display
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Confirmed Conflicts", summary.confirmed_conflicts)
+            col2.metric("Review Required", summary.review_required)
+            col3.metric("Verified Evidence", f"{summary.verified_evidence}/{summary.evidence_bearing_findings}")
+            col4.metric("Not Verified", summary.not_verified)
+            
+            # Show risk breakdown
+            st.markdown("**Risk Breakdown:**")
+            for category in ["HIGH", "MEDIUM", "LOW", "REVIEW_REQUIRED", "NO_CONFLICT_FOUND", "NOT_FOUND", "NOT_VERIFIED"]:
+                count = 0
+                for finding in result.findings:
+                    if finding.status.value == category:
+                        count += 1
+                if count > 0:
+                    st.markdown(f"- {category.replace('_', ' ').title()}: {count}")
+            
+            # Show action buttons
+            nav_col1, nav_col2, nav_col3 = st.columns(3)
+            if nav_col1.button("View Risk Dashboard", use_container_width=True, key="view_dashboard"):
+                common.request_navigation("Risk dashboard")
+            if nav_col2.button("View Evidence", use_container_width=True, key="view_evidence"):
+                common.request_navigation("Evidence explorer")
+            if nav_col3.button("Export Report", use_container_width=True, key="export"):
+                common.request_navigation("Review & export")

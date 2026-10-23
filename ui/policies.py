@@ -22,6 +22,22 @@ def render() -> None:
     st.markdown('<div class="cl-kicker">Step 2 · Policy</div>', unsafe_allow_html=True)
     st.title("Policy settings")
 
+    # Show notifications from upload page
+    security_alert = st.session_state.get("analysis_security_alert")
+    if security_alert:
+        common.write_error(security_alert)
+        # Don't clear immediately - let it persist
+
+    success = st.session_state.get("analysis_success")
+    if success:
+        common.write_success(success)
+        # Don't clear immediately - let it persist
+
+    error = st.session_state.get("analysis_error")
+    if error:
+        common.write_error(error)
+        # Don't clear immediately - let it persist
+
     current: PolicyConfig = st.session_state["policy"]
     result = common.get_result()
     saved_notice = st.session_state.pop("_policy_saved_notice", None)
@@ -154,10 +170,45 @@ def render() -> None:
         use_container_width=True,
         disabled=result is None,
     ):
-        if common.rerun_current() is not None:
-            common.request_navigation("Risk dashboard")
-        else:
-            common.write_error("No file available")
+        with st.status("Re-analyzing…", expanded=True) as status:
+            status.write("📄 Loading document…")
+            analysis_result = common.rerun_current()
+            if analysis_result is None:
+                common.write_error("No file available")
+            else:
+                status.write("✓ Document loaded")
+                status.write("🔍 Segmenting clauses…")
+                status.write("✓ Clauses segmented")
+                status.write("🛡️ Checking for prompt injection…")
+                status.write("✓ Security check complete")
+                status.write("📚 Retrieving relevant passages…")
+                status.write("✓ Passages retrieved")
+                status.write("⚖️ Applying new policy rules…")
+                status.write("✓ Policy evaluation complete")
+                status.write("🔎 Verifying evidence…")
+                status.write("✓ Evidence verified")
+                status.write("📊 Classifying risks…")
+                status.write("✓ Risk classification complete")
+
+                # Create a short, understandable summary
+                summary = analysis_result.summary
+                risk_summary = []
+                if summary.confirmed_conflicts > 0:
+                    risk_summary.append(f"{summary.confirmed_conflicts} HIGH/MEDIUM risks")
+                if summary.review_required > 0:
+                    risk_summary.append(f"{summary.review_required} need review")
+                if summary.not_verified > 0:
+                    risk_summary.append(f"{summary.not_verified} unverified")
+                if summary.no_conflict_found > 0:
+                    risk_summary.append(f"{summary.no_conflict_found} compliant")
+
+                summary_text = ", ".join(risk_summary) if risk_summary else "No issues found"
+                status.update(
+                    label=f"Done · {summary_text}",
+                    state="complete",
+                    expanded=False,
+                )
+                common.request_navigation("Risk dashboard")
     if action2.button("Reset to defaults", use_container_width=True):
         st.session_state["policy"] = PolicyConfig()
         st.rerun()

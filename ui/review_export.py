@@ -217,6 +217,23 @@ def render() -> None:
     result = common.get_result()
     st.markdown('<div class="cl-kicker">Step 4 · Decide & export</div>', unsafe_allow_html=True)
     st.title("Review & export")
+
+    # Show notifications from upload page
+    security_alert = st.session_state.get("analysis_security_alert")
+    if security_alert:
+        common.write_error(security_alert)
+        # Don't clear immediately - let it persist
+
+    success = st.session_state.get("analysis_success")
+    if success:
+        common.write_success(success)
+        # Don't clear immediately - let it persist
+
+    error = st.session_state.get("analysis_error")
+    if error:
+        common.write_error(error)
+        # Don't clear immediately - let it persist
+
     if result is None:
         _empty_state()
         return

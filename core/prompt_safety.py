@@ -19,12 +19,12 @@ INJECTION_PATTERN = re.compile(
     r"\b(?:ignore|disregard|forget)\s+(?:all\s+|any\s+)?(?:of\s+)?"
     r"(?:the\s+)?(?:previous|prior|above|earlier)\s+"
     r"(?:instructions?|prompts?|rules?|directions?)\b"
-    r"|\b(?:system|developer)\s+prompt\b"
+    r"|\b(?:system|developer)\s+(?:prompt|instruction)\b"
     r"|\byou\s+are\s+now\s+(?:a|an|the)\b"
     r"|\b(?:report|state|declare|assume)\s+(?:that\s+)?(?:this\s+)?"
     r"(?:contract|agreement)\s+(?:is\s+)?(?:fully\s+)?(?:compliant|safe|risk[- ]free)\b"
     r"|\bdo\s+not\s+(?:mention|report|flag|disclose)\b"
-    r"|\b(?:override|bypass|disable)\s+(?:the\s+)?(?:policy|rules?|checks?|safety)\b"
+    r"|\b(?:override|bypass|disable)\s+(?:the\s+)?(?:policy|rules?|checks?|safety|validations?)\b"
     r"|\breturn\s+(?:an?\s+)?(?:empty|no)\s+(?:findings?|issues?|risks?)\b"
     r")",
     re.IGNORECASE,
@@ -44,21 +44,19 @@ class InjectionHit:
 def find_injection_hits(segments: list[ClauseSegment]) -> list[InjectionHit]:
     hits: list[InjectionHit] = []
     for segment in segments:
-        match = INJECTION_PATTERN.search(segment.text)
-        if not match:
-            continue
-        start = max(0, match.start() - 60)
-        end = min(len(segment.text), match.end() + 80)
-        hits.append(
-            InjectionHit(
-                clause_id=segment.clause_id,
-                source_id=segment.source_id,
-                paragraph_index=segment.paragraph_index,
-                page_number=segment.page_number,
-                matched_text=match.group(0),
-                excerpt=segment.text[start:end].replace("\n", " ").strip(),
+        for match in INJECTION_PATTERN.finditer(segment.text):
+            start = max(0, match.start() - 60)
+            end = min(len(segment.text), match.end() + 80)
+            hits.append(
+                InjectionHit(
+                    clause_id=segment.clause_id,
+                    source_id=segment.source_id,
+                    paragraph_index=segment.paragraph_index,
+                    page_number=segment.page_number,
+                    matched_text=match.group(0),
+                    excerpt=segment.text[start:end].replace("\n", " ").strip(),
+                )
             )
-        )
     return hits
 
 

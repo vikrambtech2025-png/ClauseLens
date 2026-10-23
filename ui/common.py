@@ -135,6 +135,8 @@ def init_state() -> None:
     st.session_state.setdefault("source_path", None)
     st.session_state.setdefault("source_name", None)
     st.session_state.setdefault("analysis_error", None)
+    st.session_state.setdefault("analysis_security_alert", None)
+    st.session_state.setdefault("analysis_success", None)
     st.session_state.setdefault("review_store", {})
     st.session_state.setdefault("analysis_count", 0)
     st.session_state.setdefault("analysis_policy_fingerprint", None)
@@ -160,10 +162,21 @@ def request_navigation(page: str) -> None:
 def clear_analysis() -> None:
     st.session_state["result"] = None
     st.session_state["analysis_error"] = None
+    st.session_state["analysis_security_alert"] = None
+    st.session_state["analysis_success"] = None
+    st.session_state["analysis_summary"] = None
     st.session_state["review_store"] = {}
     st.session_state["source_path"] = None
     st.session_state["source_name"] = None
     st.session_state["analysis_policy_fingerprint"] = None
+    st.session_state["document_sha256"] = None
+    st.session_state["uploaded_file_size"] = None
+    # Clear evidence viewer filters
+    for key in ("ev_category", "ev_status", "ev_search", "ev_selected"):
+        st.session_state.pop(key, None)
+    # Clear dashboard filters
+    for key in ("dash_status_filter", "dash_category_filter", "dash_search"):
+        st.session_state.pop(key, None)
 
 
 def set_analysis(result: AnalysisResult, source_path: str, source_name: str) -> None:
@@ -176,7 +189,7 @@ def set_analysis(result: AnalysisResult, source_path: str, source_name: str) -> 
     st.session_state["analysis_count"] = int(st.session_state.get("analysis_count", 0)) + 1
 
 
-def run_analysis(file_path: str, source_name: str, use_llm: bool) -> AnalysisResult:
+def run_analysis(file_path: str, source_name: str, use_llm: bool, progress_callback=None) -> AnalysisResult:
     policy: PolicyConfig = st.session_state["policy"]
     pipeline = AnalysisPipeline()
     result = pipeline.analyze_file(file_path, source_name, policy, use_llm=use_llm)

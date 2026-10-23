@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from models.schemas import ClauseCategory, FindingStatus, PolicyConfig, VerificationStatus
 from tests.helpers import evidence_statuses, run_sample, rule, status_map
 
