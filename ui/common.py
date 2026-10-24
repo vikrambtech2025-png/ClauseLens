@@ -76,11 +76,11 @@ def inject_css() -> None:
         .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em;}
         .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;}
         .cl-sub {font-size: .95rem; line-height: 1.45;}
-        .cl-card {border: 1px solid #e0e0e0; border-radius: 14px; padding: 16px 18px; background: #ffffff; height: 100%;}
-        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; font-weight: 600; letter-spacing: .02em;}
+        .cl-card {border: 1px solid #000000; border-radius: 14px; padding: 16px 18px; background: #000000; color: #ffffff; height: 100%;}
+        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; font-weight: 600; letter-spacing: .02em; color: #ffffff !important;}
         .cl-big {font-size: 1.85rem; font-weight: 750; line-height: 1.1;}
         .cl-mini {font-size: .78rem;}
-        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap;}
+        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap; color: #ffffff !important; background-color: #333333 !important; border: 1px solid #ffffff !important;}
         .cl-flag {border-left: 4px solid #e0e0e0; padding: 10px 14px; margin: 8px 0; background: #f9f9f9; border-radius: 0 10px 10px 0;}
         .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
         .cl-quote mark {background: #ffff00; padding: 1px 2px;}
@@ -198,9 +198,10 @@ def badge(status: str, label: str | None = None) -> str:
     color = STATUS_COLORS.get(status, "#475467")
     background = _tint(color)
     text = label or STATUS_LABELS.get(status, status.replace("_", " ").title())
+    # Use white text on dark background for visibility on black cards
     return (
-        f'<span class="cl-badge" style="color:{color};background:{background};'
-        f'border:1px solid {color}33">{esc(text)}</span>'
+        f'<span class="cl-badge" style="color:#ffffff;background:#333333;'
+        f'border:1px solid #ffffff">{esc(text)}</span>'
     )
 
 
@@ -209,9 +210,10 @@ def verification_badge(status: VerificationStatus | str) -> str:
     good = value == "VERIFIED"
     color = "#067647" if good else "#b42318" if value.startswith("FAILED") else "#b54708"
     label = VERIFICATION_LABELS.get(value, value.replace("_", " ").title())
+    # Use white text on dark background for visibility on black cards
     return (
-        f'<span class="cl-badge" style="color:{color};background:{_tint(color)};'
-        f'border:1px solid {color}33">{esc(label)}</span>'
+        f'<span class="cl-badge" style="color:#ffffff;background:#333333;'
+        f'border:1px solid #ffffff">{esc(label)}</span>'
     )
 
 
