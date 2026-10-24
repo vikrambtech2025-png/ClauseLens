@@ -98,7 +98,8 @@ def render() -> None:
 
     security_alert = st.session_state.get("analysis_security_alert")
     if security_alert:
-        common.write_error(security_alert)
+        # Display security alert in white text with black background
+        st.markdown(f'<div style="color: #ffffff; background-color: #000000; padding: 10px; border-radius: 5px; font-weight: 600;">{common.esc(security_alert)}</div>', unsafe_allow_html=True)
 
     success = st.session_state.get("analysis_success")
     if success:
