@@ -68,59 +68,84 @@ def inject_css() -> None:
         """
         <style>
         :root {
-            --cl-ink: #0f172a;
-            --cl-muted: #475467;
-            --cl-line: #e4e7ec;
-            --cl-teal: #0f766e;
-            --cl-soft: #f8fafc;
+            --cl-ink: #000000;
+            --cl-muted: #000000;
+            --cl-line: #000000;
+            --cl-teal: #000000;
+            --cl-soft: #ffffff;
         }
-        .block-container {padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1240px;}
-        h1, h2, h3 {color: var(--cl-ink); letter-spacing: -0.02em;}
-        .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em; color: var(--cl-ink);}
-        .cl-brand span {color: var(--cl-teal);}
-        .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--cl-muted); font-weight: 700;}
-        .cl-sub {color: var(--cl-muted); font-size: .95rem; line-height: 1.45;}
-        .cl-card {border: 1px solid var(--cl-line); border-radius: 14px; padding: 16px 18px; background: #fff; color: var(--cl-ink); height: 100%;}
-        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; color: var(--cl-muted); font-weight: 600; letter-spacing: .02em;}
-        .cl-big {font-size: 1.85rem; font-weight: 750; color: var(--cl-ink); line-height: 1.1;}
-        .cl-mini {font-size: .78rem; color: var(--cl-muted);}
-        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap;}
-        .cl-flag {border-left: 4px solid var(--cl-line); padding: 10px 14px; margin: 8px 0; background: var(--cl-soft); color: var(--cl-ink); border-radius: 0 10px 10px 0;}
-        .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #f8fafc; color: var(--cl-ink); border: 1px solid var(--cl-line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
-        .cl-quote mark {background: #fef0c7; color: #7a2e0e; padding: 1px 2px;}
-        .cl-source {font-size: .8rem; color: var(--cl-muted);}
-        .cl-divider {height: 1px; background: var(--cl-line); margin: 14px 0;}
-        .cl-note {background: #f0f9ff; border: 1px solid #b9e6fe; border-radius: 10px; padding: 12px 14px; color: #0b4a6f; font-size: .88rem;}
-        .cl-warn {background: #fffaeb; border: 1px solid #fedf89; border-radius: 10px; padding: 12px 14px; color: #7a2e0e; font-size: .88rem;}
-        .cl-error {background: #fef3f2; border: 1px solid #fecdca; border-radius: 10px; padding: 12px 14px; color: #912018; font-size: .88rem;}
-        .cl-success {background: #ecfdf3; border: 1px solid #abefc6; border-radius: 10px; padding: 12px 14px; color: #05603a; font-size: .88rem;}
-        div[data-testid="stMetricValue"] {font-size: 1.55rem;}
-        div[data-testid="stSidebar"] {border-right: 1px solid var(--cl-line);}
-        .stButton > button, .stDownloadButton > button {border-radius: 9px; font-weight: 600;}
+        body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        .block-container {
+            padding-top: 2.2rem;
+            padding-bottom: 3rem;
+            max-width: 1240px;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        h1, h2, h3, h4, h5, h6 {color: #000000 !important; letter-spacing: -0.02em;}
+        .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em; color: #000000 !important;}
+        .cl-brand span {color: #000000 !important;}
+        .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: #000000 !important; font-weight: 700;}
+        .cl-sub {color: #000000 !important; font-size: .95rem; line-height: 1.45;}
+        .cl-card {border: 1px solid #000000; border-radius: 14px; padding: 16px 18px; background: #ffffff; color: #000000 !important; height: 100%;}
+        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; color: #000000 !important; font-weight: 600; letter-spacing: .02em;}
+        .cl-big {font-size: 1.85rem; font-weight: 750; color: #000000 !important; line-height: 1.1;}
+        .cl-mini {font-size: .78rem; color: #000000 !important;}
+        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap; color: #000000 !important; background: #ffffff !important; border: 1px solid #000000 !important;}
+        .cl-flag {border-left: 4px solid #000000; padding: 10px 14px; margin: 8px 0; background: #ffffff; color: #000000 !important; border-radius: 0 10px 10px 0;}
+        .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #ffffff; color: #000000 !important; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
+        .cl-quote mark {background: #ffff00; color: #000000; padding: 1px 2px;}
+        .cl-source {font-size: .8rem; color: #000000 !important;}
+        .cl-divider {height: 1px; background: #000000; margin: 14px 0;}
+        .cl-note {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
+        .cl-warn {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
+        .cl-error {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
+        .cl-success {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
+        div[data-testid="stMetricValue"] {font-size: 1.55rem; color: #000000 !important;}
+        div[data-testid="stSidebar"] {border-right: 1px solid #000000; background-color: #ffffff !important; color: #000000 !important;}
+        div[data-testid="stSidebar"] * {background-color: #ffffff !important; color: #000000 !important;}
+        div[data-testid="stSidebar"] .stRadio label {color: #000000 !important;}
+        div[data-testid="stSidebar"] .stRadio > div {background-color: #ffffff !important;}
+        div[data-testid="stSidebar"] [role="radiogroup"] {background-color: #ffffff !important;}
+        div[data-testid="stSidebar"] [role="radio"] {background-color: #ffffff !important; color: #000000 !important;}
+        div[data-testid="stSidebar"] [role="radio"]:checked {background-color: #ffffff !important; color: #000000 !important;}
+        div[data-testid="stSidebar"] .stText {color: #000000 !important;}
+        div[data-testid="stSidebar"] .stMarkdown {color: #000000 !important;}
+        div[data-testid="stSidebar"] p {color: #000000 !important;}
+        div[data-testid="stSidebar"] span {color: #000000 !important;}
+        div[data-testid="stSidebar"] div {color: #000000 !important;}
+        .stButton > button, .stDownloadButton > button {border-radius: 9px; font-weight: 600; color: #000000 !important; background-color: #ffffff !important; border: 1px solid #000000 !important;}
         .stButton > button:disabled, .stDownloadButton > button:disabled,
         .stButton > button:disabled p, .stDownloadButton > button:disabled p {
-            color: #475467 !important;
-            -webkit-text-fill-color: #475467 !important;
+            color: #666666 !important;
+            -webkit-text-fill-color: #666666 !important;
             opacity: 1 !important;
         }
-        .stButton > button:disabled, .stDownloadButton > button:disabled {border-color: #cbd5e1 !important;}
-        .stTextArea textarea, .stTextInput input {border-radius: 8px;}
-        [data-testid="stFileUploaderDropzone"] {border-radius: 12px; border: 1.5px dashed #b6c2d1; background: #fbfdff;}
+        .stButton > button:disabled, .stDownloadButton > button:disabled {border-color: #cccccc !important;}
+        .stTextArea textarea, .stTextInput input {border-radius: 8px; color: #000000 !important; background-color: #ffffff !important; border: 1px solid #000000 !important;}
+        [data-testid="stFileUploaderDropzone"] {border-radius: 12px; border: 1.5px dashed #000000; background: #ffffff !important; color: #000000 !important;}
+        /* Force all Streamlit elements to black text on white background */
+        .stMarkdown, .stText, .stCaption, .stMetricLabel, .stMetricDelta, p, span, div, label {
+            color: #000000 !important;
+        }
         /* Streamlit's default syntax colors are tuned for a dark palette. Recolor
            every JSON/code token for a light background so no value is washed out. */
-        .token.punctuation {color: #475467 !important;}
-        .token.property {color: #0b4a6f !important;}
-        .token.operator {color: #7a2e0e !important;}
-        .token.string {color: #05603a !important;}
-        .token.number {color: #6941c6 !important;}
-        .token.boolean {color: #912018 !important;}
-        .token.null, .token.keyword {color: #1d4ed8 !important;}
-        code {color: #0b4a6f !important;}
+        .token.punctuation {color: #000000 !important;}
+        .token.property {color: #000000 !important;}
+        .token.operator {color: #000000 !important;}
+        .token.string {color: #000000 !important;}
+        .token.number {color: #000000 !important;}
+        .token.boolean {color: #000000 !important;}
+        .token.null, .token.keyword {color: #000000 !important;}
+        code {color: #000000 !important;}
         .pretty-json-container, .pretty-json-container div, .pretty-json-container span {
-            color: var(--cl-ink) !important;
+            color: #000000 !important;
         }
         .pretty-json-container .object-key, .pretty-json-container .object-key span {
-            color: #0b4a6f !important;
+            color: #000000 !important;
             opacity: 1 !important;
         }
         </style>
