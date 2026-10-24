@@ -67,87 +67,33 @@ def inject_css() -> None:
     st.markdown(
         """
         <style>
-        :root {
-            --cl-ink: #000000;
-            --cl-muted: #000000;
-            --cl-line: #000000;
-            --cl-teal: #000000;
-            --cl-soft: #ffffff;
-        }
-        body {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-        }
         .block-container {
             padding-top: 2.2rem;
             padding-bottom: 3rem;
             max-width: 1240px;
-            background-color: #ffffff !important;
-            color: #000000 !important;
         }
-        h1, h2, h3, h4, h5, h6 {color: #000000 !important; letter-spacing: -0.02em;}
-        .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em; color: #000000 !important;}
-        .cl-brand span {color: #000000 !important;}
-        .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: #000000 !important; font-weight: 700;}
-        .cl-sub {color: #000000 !important; font-size: .95rem; line-height: 1.45;}
-        .cl-card {border: 1px solid #000000; border-radius: 14px; padding: 16px 18px; background: #ffffff; color: #000000 !important; height: 100%;}
-        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; color: #000000 !important; font-weight: 600; letter-spacing: .02em;}
-        .cl-big {font-size: 1.85rem; font-weight: 750; color: #000000 !important; line-height: 1.1;}
-        .cl-mini {font-size: .78rem; color: #000000 !important;}
-        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap; color: #000000 !important; background: #ffffff !important; border: 1px solid #000000 !important;}
-        .cl-flag {border-left: 4px solid #000000; padding: 10px 14px; margin: 8px 0; background: #ffffff; color: #000000 !important; border-radius: 0 10px 10px 0;}
-        .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #ffffff; color: #000000 !important; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
-        .cl-quote mark {background: #ffff00; color: #000000; padding: 1px 2px;}
-        .cl-source {font-size: .8rem; color: #000000 !important;}
-        .cl-divider {height: 1px; background: #000000; margin: 14px 0;}
-        .cl-note {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
-        .cl-warn {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
-        .cl-error {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
-        .cl-success {background: #ffffff; border: 1px solid #000000; border-radius: 10px; padding: 12px 14px; color: #000000 !important; font-size: .88rem;}
-        div[data-testid="stMetricValue"] {font-size: 1.55rem; color: #000000 !important;}
-        div[data-testid="stSidebar"] {border-right: 1px solid #000000; background-color: #ffffff !important; color: #000000 !important;}
-        div[data-testid="stSidebar"] * {background-color: #ffffff !important; color: #000000 !important;}
-        div[data-testid="stSidebar"] .stRadio label {color: #000000 !important;}
-        div[data-testid="stSidebar"] .stRadio > div {background-color: #ffffff !important;}
-        div[data-testid="stSidebar"] [role="radiogroup"] {background-color: #ffffff !important;}
-        div[data-testid="stSidebar"] [role="radio"] {background-color: #ffffff !important; color: #000000 !important;}
-        div[data-testid="stSidebar"] [role="radio"]:checked {background-color: #ffffff !important; color: #000000 !important;}
-        div[data-testid="stSidebar"] .stText {color: #000000 !important;}
-        div[data-testid="stSidebar"] .stMarkdown {color: #000000 !important;}
-        div[data-testid="stSidebar"] p {color: #000000 !important;}
-        div[data-testid="stSidebar"] span {color: #000000 !important;}
-        div[data-testid="stSidebar"] div {color: #000000 !important;}
-        .stButton > button, .stDownloadButton > button {border-radius: 9px; font-weight: 600; color: #000000 !important; background-color: #ffffff !important; border: 1px solid #000000 !important;}
-        .stButton > button:disabled, .stDownloadButton > button:disabled,
-        .stButton > button:disabled p, .stDownloadButton > button:disabled p {
-            color: #666666 !important;
-            -webkit-text-fill-color: #666666 !important;
-            opacity: 1 !important;
-        }
-        .stButton > button:disabled, .stDownloadButton > button:disabled {border-color: #cccccc !important;}
-        .stTextArea textarea, .stTextInput input {border-radius: 8px; color: #000000 !important; background-color: #ffffff !important; border: 1px solid #000000 !important;}
-        [data-testid="stFileUploaderDropzone"] {border-radius: 12px; border: 1.5px dashed #000000; background: #ffffff !important; color: #000000 !important;}
-        /* Force all Streamlit elements to black text on white background */
-        .stMarkdown, .stText, .stCaption, .stMetricLabel, .stMetricDelta, p, span, div, label {
-            color: #000000 !important;
-        }
-        /* Streamlit's default syntax colors are tuned for a dark palette. Recolor
-           every JSON/code token for a light background so no value is washed out. */
-        .token.punctuation {color: #000000 !important;}
-        .token.property {color: #000000 !important;}
-        .token.operator {color: #000000 !important;}
-        .token.string {color: #000000 !important;}
-        .token.number {color: #000000 !important;}
-        .token.boolean {color: #000000 !important;}
-        .token.null, .token.keyword {color: #000000 !important;}
-        code {color: #000000 !important;}
-        .pretty-json-container, .pretty-json-container div, .pretty-json-container span {
-            color: #000000 !important;
-        }
-        .pretty-json-container .object-key, .pretty-json-container .object-key span {
-            color: #000000 !important;
-            opacity: 1 !important;
-        }
+        h1, h2, h3, h4, h5, h6 {letter-spacing: -0.02em;}
+        .cl-brand {font-weight: 800; font-size: 1.55rem; letter-spacing: -0.04em;}
+        .cl-kicker {font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700;}
+        .cl-sub {font-size: .95rem; line-height: 1.45;}
+        .cl-card {border: 1px solid #e0e0e0; border-radius: 14px; padding: 16px 18px; background: #ffffff; height: 100%;}
+        .cl-card h4 {margin: 0 0 6px 0; font-size: .85rem; font-weight: 600; letter-spacing: .02em;}
+        .cl-big {font-size: 1.85rem; font-weight: 750; line-height: 1.1;}
+        .cl-mini {font-size: .78rem;}
+        .cl-badge {display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .72rem; font-weight: 700; line-height: 1.5; white-space: nowrap;}
+        .cl-flag {border-left: 4px solid #e0e0e0; padding: 10px 14px; margin: 8px 0; background: #f9f9f9; border-radius: 0 10px 10px 0;}
+        .cl-quote {font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.55; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 10px; padding: 12px 14px; white-space: pre-wrap;}
+        .cl-quote mark {background: #ffff00; padding: 1px 2px;}
+        .cl-source {font-size: .8rem; color: #666666;}
+        .cl-divider {height: 1px; background: #e0e0e0; margin: 14px 0;}
+        .cl-note {background: #f0f7ff; border: 1px solid #b3d7ff; border-radius: 10px; padding: 12px 14px; font-size: .88rem;}
+        .cl-warn {background: #fff8e6; border: 1px solid #ffd54f; border-radius: 10px; padding: 12px 14px; font-size: .88rem;}
+        .cl-error {background: #fff5f5; border: 1px solid #feb2b2; border-radius: 10px; padding: 12px 14px; font-size: .88rem;}
+        .cl-success {background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 10px; padding: 12px 14px; font-size: .88rem;}
+        div[data-testid="stMetricValue"] {font-size: 1.55rem;}
+        .stButton > button, .stDownloadButton > button {border-radius: 9px; font-weight: 600;}
+        .stTextArea textarea, .stTextInput input {border-radius: 8px;}
+        [data-testid="stFileUploaderDropzone"] {border-radius: 12px;}
         </style>
         """,
         unsafe_allow_html=True,
