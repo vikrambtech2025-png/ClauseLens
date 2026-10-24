@@ -102,7 +102,11 @@ def render() -> None:
 
     success = st.session_state.get("analysis_success")
     if success:
-        common.write_success(success)
+        if success == "The uploaded contract has been done !!!":
+            # Display this specific message in black text
+            st.markdown(f'<div style="color: #000000; font-weight: 600;">{common.esc(success)}</div>', unsafe_allow_html=True)
+        else:
+            common.write_success(success)
         # Clear success message after showing it once (only for upload page)
         if success == "The uploaded contract has been done !!!":
             st.session_state["analysis_success"] = None
