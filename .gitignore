@@ -52,3 +52,16 @@ htmlcov/
 manual_upload_test.png
 test_results.png
 test_*.py
+
+# Large / generated artifacts
+*.gguf
+*.webm
+*.png
+.env
+data/
+evaluation/
+samples/*.png
+ClauseLens_Abstract.docx
+sample format.docx
+streamlit.out.log
+streamlit.err.log

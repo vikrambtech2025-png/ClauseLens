@@ -23,13 +23,13 @@ def _save_upload(filename: str, data: bytes) -> Path:
     return path
 
 
-def _execute(path: Path, name: str, use_llm: bool, is_demo: bool = False) -> None:
+def _execute(path: Path, name: str, use_llm: bool, is_demo: bool = False, use_llm_decider: bool = False) -> None:
     try:
         with st.status("Analyzing…", expanded=True) as status:
             status.write(f"📄 Loading file: {name}")
             status.write(f"📄 File path: {path}")
             status.write("📄 Extracting text from document…")
-            result = common.run_analysis(str(path), name, use_llm)
+            result = common.run_analysis(str(path), name, use_llm, use_finetuned=False, use_llm_decider=use_llm_decider)
             status.write("✓ Text extracted")
             status.write(f"📄 Document: {result.document.filename}")
             status.write(f"📄 Characters extracted: {result.document.stats.num_chars}")
@@ -39,7 +39,10 @@ def _execute(path: Path, name: str, use_llm: bool, is_demo: bool = False) -> Non
             status.write("✓ Security check complete")
             status.write("📚 Retrieving relevant passages…")
             status.write("✓ Passages retrieved")
-            status.write("⚖️ Applying policy rules…")
+            if use_llm_decider:
+                status.write("🤖 LLM deciding from RAG output…")
+            else:
+                status.write("⚖️ Applying policy rules…")
             status.write("✓ Policy evaluation complete")
             status.write("🔎 Verifying evidence…")
             status.write("✓ Evidence verified")
@@ -131,13 +134,25 @@ def render() -> None:
             key=uploader_key,
         )
 
-        use_llm = st.checkbox(
-            "Use AI interpretation",
-            value=False,
-            disabled=not settings.llm_configured,
-            help=settings.llm_status_label,
-            key="use_llm_toggle",
+        from core.llm_decider import llm_backend_available as _llm_avail
+
+        _backend_ok = _llm_avail()
+        if not _backend_ok:
+            st.warning(
+                "Local LLM mode requires `llama-cpp-python` and a GGUF model file, "
+                "which are not available in this environment. "
+                "Install with: `pip install llama-cpp-python` and place a GGUF model "
+                "in `models/llm_decider/`. Using Rules engine instead."
+            )
+        mode = st.radio(
+            "Analysis mode",
+            ["Rules engine", "LLM from RAG (local)"],
+            horizontal=True,
+            help="LLM from RAG: RAG finds clauses, local GGUF decides from those passages only. Verifier still applies.",
+            disabled=not _backend_ok,
         )
+        use_llm_decider = _backend_ok and mode == "LLM from RAG (local)"
+        use_llm = False
 
         analyze_col, clear_col = st.columns([1.2, 1])
         analyze_clicked = analyze_col.button(
@@ -170,7 +185,7 @@ def render() -> None:
                 path = _save_upload(uploaded.name, data)
                 # Store the actual file size for verification
                 st.session_state["uploaded_file_size"] = len(data)
-                _execute(path, uploaded.name, use_llm, is_demo=False)
+                _execute(path, uploaded.name, use_llm, is_demo=False, use_llm_decider=use_llm_decider)
 
         st.caption("What this does: Extracts text → Checks security → Evaluates clauses → Verifies evidence → Classifies risks")
 
@@ -183,12 +198,15 @@ def render() -> None:
             index=0,
             key="demo_sample",
         )
-        demo_use_llm = st.checkbox(
-            "Use AI interpretation",
-            value=False,
-            disabled=not settings.llm_configured,
-            key="demo_llm",
+        demo_mode = st.radio(
+            "Demo mode",
+            ["Rules engine", "LLM from RAG (local)"],
+            horizontal=True,
+            key="demo_mode",
+            disabled=not _backend_ok,
         )
+        demo_use_llm_decider = _backend_ok and demo_mode == "LLM from RAG (local)"
+        demo_use_llm = False
         if st.button("Run demo analysis", type="primary", use_container_width=True):
             path = options[selected]
             if not path.exists():
@@ -197,7 +215,7 @@ def render() -> None:
             else:
                 # Clear previous analysis before running new one
                 common.clear_analysis()
-                _execute(path, path.name, demo_use_llm, is_demo=True)
+                _execute(path, path.name, demo_use_llm, is_demo=True, use_llm_decider=demo_use_llm_decider)
 
         st.caption("What this does: Extracts text → Checks security → Evaluates clauses → Verifies evidence → Classifies risks")
 

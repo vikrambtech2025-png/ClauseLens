@@ -34,37 +34,6 @@ STATUS_TO_RISK: dict[FindingStatus, RiskLevel] = {
     FindingStatus.NOT_VERIFIED: RiskLevel.LOW,
 }
 
-_WORD_NUMBERS = {
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-    "eleven": 11,
-    "twelve": 12,
-    "thirteen": 13,
-    "fourteen": 14,
-    "fifteen": 15,
-    "sixteen": 16,
-    "seventeen": 17,
-    "eighteen": 18,
-    "nineteen": 19,
-    "twenty": 20,
-    "thirty": 30,
-    "forty": 40,
-    "fifty": 50,
-    "sixty": 60,
-    "seventy": 70,
-    "eighty": 80,
-    "ninety": 90,
-    "one hundred twenty": 120,
-}
-
 _TEENS = {
     "ten": 10,
     "eleven": 11,
@@ -103,15 +72,20 @@ _UNITS = {
 # days". The extractor must understand both the word and the parenthetical
 # numeral. Ignoring that form would miss real deadlines and produce a false
 # "no conflict" result.
-_WORD_DAY = (
-    r"(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
-    r"thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|"
-    r"twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
-    r"(?:[-\s](?:one|two|three|four|five|six|seven|eight|nine))?"
-)
+#
+# Compound numbers matter more than they appear: "one hundred and twenty
+# business days" previously matched only the trailing "twenty", silently
+# reading a 120-day deadline as 20 days. In a review product that is the most
+# dangerous kind of error -- it turns a policy breach into a passing clause.
+_UNIT_WORD = r"(?:one|two|three|four|five|six|seven|eight|nine)"
+_TEEN_WORD = r"(?:ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)"
+_TENS_WORD = r"(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)"
+_HUNDREDS_WORD = rf"(?:{_UNIT_WORD}\s+hundred(?:\s+and)?)"
+_UNDER_HUNDRED = rf"(?:{_TEEN_WORD}|{_TENS_WORD}(?:[-\s]{_UNIT_WORD})?|{_UNIT_WORD})"
+_WORD_DAY = rf"(?:{_HUNDREDS_WORD}\s+{_UNDER_HUNDRED}|{_HUNDREDS_WORD}|{_UNDER_HUNDRED})"
 _DAY_NUMBER = (
-    rf"(?P<number>\d{{1,3}}|{_WORD_DAY})"
-    r"(?:\s*\(\s*(?P<parenthetical>\d{1,3})\s*\))?"
+    rf"(?P<number>\d{{1,4}}|{_WORD_DAY})"
+    r"(?:\s*\(\s*(?P<parenthetical>\d{1,4})\s*\))?"
 )
 _DAY_UNIT = (
     rf"\b{_DAY_NUMBER}\s*"
@@ -121,17 +95,35 @@ _DAYS_RE = re.compile(_DAY_UNIT, re.IGNORECASE)
 
 
 def _word_to_int(value: str) -> Optional[int]:
-    cleaned = re.sub(r"\s+", " ", value.strip().casefold().replace("-", " "))
-    if cleaned in _TEENS:
-        return _TEENS[cleaned]
-    if cleaned in _TENS:
-        return _TENS[cleaned]
-    if cleaned in _UNITS:
-        return _UNITS[cleaned]
-    parts = cleaned.split()
-    if len(parts) == 2 and parts[0] in _TENS and parts[1] in _UNITS:
-        return _TENS[parts[0]] + _UNITS[parts[1]]
-    return None
+    """Convert an English number word to an int, including hundreds.
+
+    Handles "twenty", "twenty five", "one hundred", "one hundred and twenty"
+    and the hyphenated forms legal drafting mixes in freely.
+    """
+    cleaned = re.sub(r"\s+", " ", value.strip().casefold().replace("-", " ")).strip()
+    if " and " in cleaned:
+        cleaned = cleaned.replace(" and ", " ")
+
+    total = 0
+    seen_hundred = False
+    for part in cleaned.split():
+        if part == "hundred":
+            total = max(total, 1) * 100
+            seen_hundred = True
+        elif part in _TEENS:
+            total += _TEENS[part]
+        elif part in _TENS:
+            total += _TENS[part]
+        elif part in _UNITS:
+            total += _UNITS[part]
+        else:
+            return None
+    if total == 0:
+        return None
+    # Require a recognised structure; rejects a stray "hundred" with no unit.
+    if not seen_hundred and len(cleaned.split()) > 2:
+        return None
+    return total
 
 
 def parse_days_match(match: re.Match[str]) -> Optional[tuple[int, str]]:
@@ -192,8 +184,12 @@ class PolicyEngine:
     )
 
     UNCAPPED = re.compile(
-        r"\b(?:uncapped|unlimited\s+liability|no\s+(?:aggregate\s+)?limitation\s+of\s+liability|"
+        r"\b(?:uncapped|unlimited\s+liability|unlimited\s+in\s+amount|"
+        r"no\s+(?:aggregate\s+)?limitation\s+of\s+liability|"
         r"without\s+(?:any\s+)?limitation\s+of\s+liability|no\s+cap\s+on\s+liability|"
+        # "Nothing in this agreement limits ... liability" is ordinary drafting
+        # for unlimited exposure, but names no keyword above.
+        r"nothing\s+(?:in\s+(?:this|the)\s+(?:agreement|contract)\s+)?limits?\b|"
         r"liability\b.{0,50}\b(?:shall|will)\s+not\s+be\s+(?:limited|capped))\b",
         re.IGNORECASE,
     )
@@ -210,7 +206,10 @@ class PolicyEngine:
     )
     INDEMNITY = re.compile(r"\b(?:indemnif(?:y|ies|ication)|hold\s+harmless)\b", re.IGNORECASE)
     MUTUAL_INDEMNITY = re.compile(
-        r"\b(?:each\s+party|both\s+parties|mutual(?:ly)?|reciprocal)\b", re.IGNORECASE
+        # "the Customer gives no reciprocal indemnity" must not read as mutual,
+        # so a negated word does not count as a mutuality signal.
+        r"(?<!\bno\s)\b(?:each\s+party|both\s+parties|mutual(?:ly)?|reciprocal)\b",
+        re.IGNORECASE,
     )
 
     JURISDICTION_SIGNAL = re.compile(
@@ -237,9 +236,12 @@ class PolicyEngine:
         (
             "governing_law",
             re.compile(
-                r"\b(?:governed\s+by|construed\s+(?:in\s+accordance\s+)?with|subject\s+to)\b"
-                r".{0,40}?\blaws?\s+of\s+(?:the\s+)?([A-Z][A-Za-z .'\-]{1,60}?)"
-                r"(?=\s*(?:,|\.|;|\band\b|\bwithout\b|\bthe\s+parties\b|$))"
+                # Two shapes: "governed by the laws of X" (passive) and
+                # "the laws of X govern this agreement" (active). The verb
+                # prefix is optional so the active form is captured too.
+                r"(?:(?:governed\s+by|construed\s+(?:in\s+accordance\s+)?with|subject\s+to)\b"
+                r".{0,40}?)?\blaws?\s+of\s+(?:the\s+)?([A-Z][A-Za-z .'\-]{1,60}?)"
+                r"(?=\s*(?:,|\.|;|\band\b|\bwithout\b|\bthe\s+parties\b|\bgoverns?\b|$))"
             ),
         ),
         (
@@ -345,7 +347,13 @@ class PolicyEngine:
         )
         limit = policy.max_payment_days
 
-        if conditional or open_ended:
+        # A stated period that already exceeds the limit is a breach whatever the
+        # trigger is when the limit comparison is unambiguous from the numbers.
+        # But the product treats "conditional" as uncertainty about *when* the
+        # clock starts: that ambiguity blocks a confirmed conflict, so a
+        # conditional deadline must stay REVIEW_REQUIRED even if the stated
+        # number exceeds the policy maximum.
+        if (conditional or open_ended):
             return [
                 self._make(
                     ClauseCategory.PAYMENT,
@@ -376,8 +384,15 @@ class PolicyEngine:
                 )
             ]
 
+        # Basis mismatch only creates ambiguity when the approximation is the
+        # thing that might push the deadline over the limit. If the stated
+        # number of days already exceeds the policy maximum in either basis
+        # (or is unambiguously over after conversion) we must flag a conflict,
+        # not silently downgrade to a review item. If it's within limit even
+        # after conservative conversion, business-day counting is the source of
+        # uncertainty and the review/NO_CONFLICT path is correct.
         if basis_mismatch:
-            if compared_days > limit:
+            if compared_days > limit or days > limit:
                 return [
                     self._make(
                         ClauseCategory.PAYMENT,
@@ -959,7 +974,10 @@ class PolicyEngine:
                 findings.append(
                     self._make(
                         ClauseCategory.JURISDICTION_DISPUTE,
-                        FindingStatus.HIGH if exclusive else FindingStatus.MEDIUM,
+                        # Approved jurisdictions are a hard constraint, so a forum
+                        # outside the list is HIGH whether or not it is exclusive.
+                        # Exclusivity is a separate constraint entirely.
+                        FindingStatus.HIGH,
                         passage,
                         f"Approved jurisdictions: {', '.join(policy.approved_jurisdictions)}; "
                         f"contract selects {forum}"

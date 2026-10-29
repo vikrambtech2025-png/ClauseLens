@@ -400,11 +400,11 @@ class EvidenceVerifier:
             approved = self._approved(forum, policy.approved_jurisdictions)
             ok = bool(forum) and not approved
             reason = f"Found forum '{forum}' must not be in the approved list."
-            if finding.status == FindingStatus.HIGH and not evidence.get("exclusive"):
-                # High severity for jurisdiction is reserved for exclusive or hard policy
-                # violations. A non-exclusive unapproved forum is medium.
-                ok = False
-                reason = "High severity requires an exclusive unapproved forum."
+            # The verifier checks the FACT (this forum is not approved), not the
+            # severity. Re-deciding severity here duplicated the engine's policy
+            # semantics in a third place and drifted: it demanded exclusivity
+            # long after the engine stopped, so correct HIGH findings were
+            # downgraded to NOT_VERIFIED. Severity belongs to the decision layer.
         elif rule == "jurisdiction.approved":
             forum = str(evidence.get("found_forum") or "")
             approved = self._approved(forum, policy.approved_jurisdictions)

@@ -30,7 +30,7 @@ def test_initial_page_and_button_navigation():
     assert at.session_state["result"].summary.confirmed_conflicts == 4
     assert at.session_state["nav"] == "Analyze contract"
 
-    at.radio[0].set_value("Risk dashboard").run()
+    at.radio(key="nav").set_value("Risk dashboard").run()
     assert not at.exception
     assert at.session_state["nav"] == "Risk dashboard"
     assert [title.value for title in at.title] == ["Risk dashboard"]
@@ -40,15 +40,15 @@ def test_radio_navigation_evidence_and_review_save_clear():
     at = _app()
     _run_demo(at)
 
-    at.radio[0].set_value("Risk dashboard").run()
+    at.radio(key="nav").set_value("Risk dashboard").run()
     assert not at.exception
     assert [title.value for title in at.title] == ["Risk dashboard"]
 
-    at.radio[0].set_value("Evidence explorer").run()
+    at.radio(key="nav").set_value("Evidence explorer").run()
     assert not at.exception
     assert [title.value for title in at.title] == ["Evidence explorer"]
 
-    at.radio[0].set_value("Review & export").run()
+    at.radio(key="nav").set_value("Review & export").run()
     assert not at.exception
     assert [title.value for title in at.title] == ["Review & export"]
     assert at.session_state["review_store"] == {}
@@ -83,7 +83,7 @@ def test_policy_edit_save_and_rerun():
     at = _app()
     _run_demo(at)
 
-    at.radio[0].set_value("Policy settings").run()
+    at.radio(key="nav").set_value("Policy settings").run()
     assert not at.exception
     next(
         field for field in at.number_input if field.label.startswith("Maximum payment")

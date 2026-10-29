@@ -9,7 +9,10 @@ from typing import Any, Iterable
 
 import streamlit as st
 
+from config.settings import get_settings
 from core.analysis import AnalysisPipeline
+from core.ft_analyzer import FineTunedAnalyzer
+from core.llm_decider import LLMDecider
 from models.schemas import (
     AnalysisResult,
     ClauseCategory,
@@ -160,11 +163,27 @@ def set_analysis(result: AnalysisResult, source_path: str, source_name: str) -> 
     st.session_state["analysis_count"] = int(st.session_state.get("analysis_count", 0)) + 1
 
 
-def run_analysis(file_path: str, source_name: str, use_llm: bool, progress_callback=None) -> AnalysisResult:
+def run_analysis(
+    file_path: str,
+    source_name: str,
+    use_llm: bool,
+    progress_callback=None,
+    use_finetuned: bool = False,
+    use_llm_decider: bool = False,
+) -> AnalysisResult:
     policy: PolicyConfig = st.session_state["policy"]
-    pipeline = AnalysisPipeline()
-    result = pipeline.analyze_file(file_path, source_name, policy, use_llm=use_llm)
+    if use_llm_decider:
+        pipeline = LLMDecider()
+        result = pipeline.analyze_file(file_path, source_name, policy)
+    elif use_finetuned:
+        pipeline = FineTunedAnalyzer()
+        result = pipeline.analyze_file(file_path, source_name, policy)
+    else:
+        pipeline = AnalysisPipeline()
+        result = pipeline.analyze_file(file_path, source_name, policy, use_llm=use_llm)
     st.session_state["last_use_llm"] = use_llm
+    st.session_state["last_use_finetuned"] = use_finetuned
+    st.session_state["last_use_llm_decider"] = use_llm_decider
     set_analysis(result, file_path, source_name)
     return result
 
@@ -176,7 +195,9 @@ def rerun_current(use_llm: bool | None = None) -> AnalysisResult | None:
         return None
     if use_llm is None:
         use_llm = bool(st.session_state.get("last_use_llm", False))
-    return run_analysis(str(path), str(name), use_llm)
+    use_finetuned = bool(st.session_state.get("last_use_finetuned", False))
+    use_llm_decider = bool(st.session_state.get("last_use_llm_decider", False))
+    return run_analysis(str(path), str(name), use_llm, use_finetuned=use_finetuned, use_llm_decider=use_llm_decider)
 
 
 def sample_options() -> dict[str, Path]:
