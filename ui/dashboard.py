@@ -69,6 +69,12 @@ def render() -> None:
         st.markdown(f'<div style="color: #ffffff; background-color: #000000; padding: 10px; border-radius: 5px; font-weight: 600;">{common.esc(security_alert)}</div>', unsafe_allow_html=True)
         # Don't clear immediately - let it persist
 
+    fake_data_alert = st.session_state.get("analysis_fake_data_alert")
+    if fake_data_alert:
+        # Display fake data alert with red background for high visibility
+        st.markdown(f'<div style="color: #ffffff; background-color: #dc2626; padding: 15px; border-radius: 5px; font-weight: 600; border: 2px solid #991b1b;">{common.esc(fake_data_alert)}</div>', unsafe_allow_html=True)
+        # Don't clear immediately - let it persist
+
     success = st.session_state.get("analysis_success")
     if success:
         if success == "The uploaded contract has been done !!!":
@@ -86,6 +92,17 @@ def render() -> None:
     if result is None:
         _empty_state()
         return
+
+    # Show fake data detection details
+    if result.fake_data_detected:
+        st.markdown('<div class="cl-divider"></div>', unsafe_allow_html=True)
+        st.markdown("### ⚠️ Fake Data Detection Report")
+        st.error("This document appears to be fake, mocked, or falsified. The analysis results may not be reliable.")
+        if result.fake_data_reasons:
+            st.markdown("**Detection reasons:**")
+            for reason in result.fake_data_reasons:
+                st.markdown(f"- {reason}")
+        st.markdown('<div class="cl-divider"></div>', unsafe_allow_html=True)
 
     summary = result.summary
 

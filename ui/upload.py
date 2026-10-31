@@ -71,6 +71,11 @@ def _execute(path: Path, name: str, use_llm: bool, is_demo: bool = False, use_ll
         if any("prompt-injection" in warning.lower() or "injection" in warning.lower() for warning in result.warnings):
             st.session_state["analysis_security_alert"] = "SECURITY ALERT: This document contains passages that appear to be prompt-injection attempts. These passages have been quarantined from analysis, but the rest of the document was analyzed normally. Review the warnings on the Risk dashboard for details."
 
+        # Check for fake data detection
+        if result.fake_data_detected:
+            reasons_text = "; ".join(result.fake_data_reasons) if result.fake_data_reasons else "Unknown reasons"
+            st.session_state["analysis_fake_data_alert"] = f"⚠️ FAKE DATA DETECTED: This document appears to be fake, mocked, or falsified. {reasons_text} The analysis results may not be reliable."
+
         # Store file hash for verification
         st.session_state["document_sha256"] = result.document.sha256
 
@@ -104,6 +109,11 @@ def render() -> None:
         # Display security alert in white text with black background
         st.markdown(f'<div style="color: #ffffff; background-color: #000000; padding: 10px; border-radius: 5px; font-weight: 600;">{common.esc(security_alert)}</div>', unsafe_allow_html=True)
 
+    fake_data_alert = st.session_state.get("analysis_fake_data_alert")
+    if fake_data_alert:
+        # Display fake data alert with red background for high visibility
+        st.markdown(f'<div style="color: #ffffff; background-color: #dc2626; padding: 15px; border-radius: 5px; font-weight: 600; border: 2px solid #991b1b;">{common.esc(fake_data_alert)}</div>', unsafe_allow_html=True)
+
     success = st.session_state.get("analysis_success")
     if success:
         if success == "The uploaded contract has been done !!!":
@@ -116,10 +126,11 @@ def render() -> None:
             st.session_state["analysis_success"] = None
 
     # Add clear notifications button if any notifications exist
-    if error or security_alert or success:
+    if error or security_alert or fake_data_alert or success:
         if st.button("Clear notifications", use_container_width=False):
             st.session_state["analysis_error"] = None
             st.session_state["analysis_security_alert"] = None
+            st.session_state["analysis_fake_data_alert"] = None
             st.session_state["analysis_success"] = None
 
     with st.container():
@@ -139,10 +150,10 @@ def render() -> None:
         _backend_ok = _llm_avail()
         if not _backend_ok:
             st.warning(
-                "Local LLM mode requires `llama-cpp-python` and a GGUF model file, "
-                "which are not available in this environment. "
-                "Install with: `pip install llama-cpp-python` and place a GGUF model "
-                "in `models/llm_decider/`. Using Rules engine instead."
+                "LLM mode requires either `llama-cpp-python` + a GGUF model file, "
+                "or an OpenAI-compatible API key. "
+                "Set `OPENAI_API_KEY` in `.env` or install llama-cpp-python. "
+                "Using Rules engine instead."
             )
         mode = st.radio(
             "Analysis mode",
@@ -231,7 +242,10 @@ def render() -> None:
             doc_hash = st.session_state.get("document_sha256", "Unknown")
             st.caption(f"File: {source_name}")
             st.caption(f"Path: {source_path}")
-            st.caption(f"Hash: {doc_hash[:16]}..." if doc_hash != "Unknown" else f"Hash: {doc_hash}")
+            if doc_hash and doc_hash != "Unknown":
+                st.caption(f"Hash: {doc_hash[:16]}...")
+            else:
+                st.caption(f"Hash: {doc_hash or 'Unknown'}")
             st.caption(f"Document chars: {result.document.stats.num_chars}")
             st.caption(f"Document words: {result.document.stats.num_words}")
 

@@ -341,6 +341,8 @@ class AnalysisResult(BaseModel):
     generated_at: str = Field(default_factory=utc_now_iso)
     analysis_mode: str = "deterministic"
     warnings: list[str] = Field(default_factory=list)
+    fake_data_detected: bool = False
+    fake_data_reasons: list[str] = Field(default_factory=list)
     llm_status: LLMStatus = Field(default_factory=LLMStatus)
     processing_ms: float = 0.0
     pipeline_steps: list[dict[str, Any]] = Field(default_factory=list)

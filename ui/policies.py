@@ -29,6 +29,12 @@ def render() -> None:
         st.markdown(f'<div style="color: #ffffff; background-color: #000000; padding: 10px; border-radius: 5px; font-weight: 600;">{common.esc(security_alert)}</div>', unsafe_allow_html=True)
         # Don't clear immediately - let it persist
 
+    fake_data_alert = st.session_state.get("analysis_fake_data_alert")
+    if fake_data_alert:
+        # Display fake data alert with red background for high visibility
+        st.markdown(f'<div style="color: #ffffff; background-color: #dc2626; padding: 15px; border-radius: 5px; font-weight: 600; border: 2px solid #991b1b;">{common.esc(fake_data_alert)}</div>', unsafe_allow_html=True)
+        # Don't clear immediately - let it persist
+
     success = st.session_state.get("analysis_success")
     if success:
         if success == "The uploaded contract has been done !!!":

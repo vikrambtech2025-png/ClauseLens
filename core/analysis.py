@@ -22,6 +22,7 @@ from core.prompt_safety import find_injection_hits, injection_warning
 from core.retrieval import ClauseRetriever
 from core.risk_classifier import RiskClassifier
 from core.text_utils import normalize_whitespace
+from core.fake_data_detector import FakeDataDetector
 from models.schemas import (
     AnalysisResult,
     CategoryRetrieval,
@@ -115,6 +116,14 @@ class AnalysisPipeline:
         started = time.perf_counter()
         steps: list[dict[str, Any]] = []
         warnings: list[str] = list(document.stats.warnings)
+
+        # Fake / mocked / falsified document detection (heuristic, local).
+        fake_report = FakeDataDetector().detect(document)
+        if fake_report.is_fake:
+            warnings.append(
+                "FAKE DATA: The uploaded document appears to be fake, mocked, or "
+                "falsified. " + " ".join(fake_report.reasons)
+            )
 
         step_start = time.perf_counter()
         segments = self.splitter.split(document)
@@ -298,6 +307,8 @@ class AnalysisPipeline:
             summary=summary,
             analysis_mode=analysis_mode,
             warnings=self._unique(warnings),
+            fake_data_detected=fake_report.is_fake,
+            fake_data_reasons=fake_report.reasons,
             llm_status=llm_status,
             processing_ms=elapsed_ms,
             pipeline_steps=steps,
